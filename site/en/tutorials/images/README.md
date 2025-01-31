@@ -47,9 +47,6 @@ Este projeto faz parte das atividades da faculdade e tem como objetivo realizar 
 ## 🎯 Objetivo Acadêmico
 Este projeto foi desenvolvido para explorar técnicas de **processamento de imagens** e **aprendizado profundo**, garantindo um conjunto de dados mais diversificado para modelos de Machine Learning e Visão Computacional.
 
-## 📄 Licença
-Este projeto foi desenvolvido para fins acadêmicos e está disponível sob a licença MIT.
-
 📬 **Contato:** Caso tenha dúvidas ou sugestões, sinta-se à vontade para abrir uma issue ou entrar em contato!
 
 ---
