@@ -1,5 +1,5 @@
-import numpy as np
-from PIL import Image
+import numpy as np 
+from PIL import Image 
 import os
 
 class SistemaImagem:
@@ -8,6 +8,15 @@ class SistemaImagem:
         self.caminho_imagem = None
 
     def abrir_imagem(self, caminho):
+        extensoes_suportadas = ('.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp')
+        if not caminho.lower().endswith(extensoes_suportadas):
+            print(f"[ERRO] Formato não suportado: {caminho}")
+            return
+
+        if not os.path.exists(caminho):
+            print(f"[ERRO] Arquivo de imagem não encontrado: {caminho}")
+            return
+
         try:
             img = Image.open(caminho)
             if img.mode != 'RGB':
@@ -17,8 +26,6 @@ class SistemaImagem:
             print(f"[OK] Imagem carregada: {caminho}")
         except Exception as e:
             print(f"[ERRO] Falha ao abrir a imagem: {e}")
-
-            
 
     def exibir_imagem(self):
         if self.imagem:
@@ -36,46 +43,59 @@ class SistemaImagem:
         else:
             print("[INFO] Nenhuma imagem para salvar.")
 
-    def aplicar_filtro_txt(self, caminho_filtro):
+    def aplicar_filtro_com_offset_ativacao(self, caminho_filtro):
         if self.imagem is None:
             print("[INFO] Nenhuma imagem carregada.")
+            return
+
+        if not os.path.exists(caminho_filtro):
+            print(f"[ERRO] Arquivo de filtro não encontrado: {caminho_filtro}")
             return
 
         try:
             with open(caminho_filtro, 'r') as f:
                 tipo_filtro = f.readline().strip().lower()
-                tamanho = int(f.readline().strip())
+                offset = int(f.readline().strip())  # offset (bias)
+                passo = int(f.readline().strip())   # passo
+                ativacao = f.readline().strip().lower()  # nome da ativação
+                tamanho = int(f.readline().strip())      # tamanho da máscara
                 mascara = []
                 for _ in range(tamanho):
                     linha = list(map(float, f.readline().strip().split()))
                     mascara.append(linha)
                 kernel = np.array(mascara)
 
+                if "sobel" not in tipo_filtro and np.sum(kernel) != 0:
+                    kernel = kernel / np.sum(kernel)
+
         except Exception as e:
-            print(f"[ERRO] Erro ao ler o filtro: {e}")
+            print(f"[ERRO] Erro ao ler o filtro com parâmetros: {e}")
             return
 
         img_array = np.array(self.imagem)
         resultado = np.zeros_like(img_array)
 
         for canal in range(3):  # R, G, B
-            resultado[:, :, canal] = self.correlacao2d(img_array[:, :, canal], kernel, tipo_filtro)
+            resultado[:, :, canal] = self.correlacao_com_parametros(
+                img_array[:, :, canal], kernel, tipo_filtro, offset, passo, ativacao)
 
         self.imagem = Image.fromarray(np.uint8(np.clip(resultado, 0, 255)))
 
-    def correlacao2d(self, canal, kernel, tipo_filtro):
+    def correlacao_com_parametros(self, canal, kernel, tipo_filtro, bias, passo, ativacao):
         altura, largura = canal.shape
         kh, kw = kernel.shape
         ph, pw = kh // 2, kw // 2
 
         output = np.zeros_like(canal, dtype=float)
 
-        # Sem extensão de borda
-        for i in range(ph, altura - ph):
-            for j in range(pw, largura - pw):
-                regiao = canal[i - ph:i + ph + 1, j - pw:j + pw + 1]
-                valor = np.sum(regiao * kernel)
-                output[i, j] = valor
+        for i in range(ph, altura - (kh - ph - 1), max(passo, 1)):
+            for j in range(pw, largura - (kw - pw - 1), max(passo, 1)):
+                regiao = canal[i - ph:i + (kh - ph), j - pw:j + (kw - pw)]
+                if regiao.shape == kernel.shape:
+                    valor = np.sum(regiao * kernel) + bias
+                    if ativacao == "relu":
+                        valor = max(0, valor)
+                    output[i, j] = valor
 
         if "sobel" in tipo_filtro:
             output = np.abs(output)
@@ -96,7 +116,7 @@ class SistemaImagem:
 # ===========================
 if __name__ == "__main__":
     sistema = SistemaImagem()
-    sistema.abrir_imagem("sua_imagem.jpg")
-    sistema.aplicar_filtro_txt("filtro.txt")
+    sistema.abrir_imagem("Testes/testpat.1k.color2.tif")
+    sistema.aplicar_filtro_com_offset_ativacao("Testes/sobelHorizontal.txt")
     sistema.exibir_imagem()
-    sistema.salvar_imagem("saida.jpg")
+    sistema.salvar_imagem("sobelHorizontal.jpg")

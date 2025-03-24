@@ -1,5 +1,5 @@
-import numpy as np
-from PIL import Image
+import numpy as np 
+from PIL import Image 
 import os
 
 class SistemaImagem:
@@ -17,8 +17,6 @@ class SistemaImagem:
             print(f"[OK] Imagem carregada: {caminho}")
         except Exception as e:
             print(f"[ERRO] Falha ao abrir a imagem: {e}")
-
-            
 
     def exibir_imagem(self):
         if self.imagem:
@@ -50,7 +48,6 @@ class SistemaImagem:
                     linha = list(map(float, f.readline().strip().split()))
                     mascara.append(linha)
                 kernel = np.array(mascara)
-
         except Exception as e:
             print(f"[ERRO] Erro ao ler o filtro: {e}")
             return
@@ -70,12 +67,16 @@ class SistemaImagem:
 
         output = np.zeros_like(canal, dtype=float)
 
-        # Sem extensão de borda
-        for i in range(ph, altura - ph):
-            for j in range(pw, largura - pw):
-                regiao = canal[i - ph:i + ph + 1, j - pw:j + pw + 1]
-                valor = np.sum(regiao * kernel)
-                output[i, j] = valor
+        # Ajusta o loop para suportar kernels pares ou Ã­mpares
+        for i in range(ph, altura - (kh - ph - 1)):
+            for j in range(pw, largura - (kw - pw - 1)):
+                regiao = canal[i - ph:i + (kh - ph), j - pw:j + (kw - pw)]
+                if regiao.shape == kernel.shape:
+                    valor = np.sum(regiao * kernel)
+                    output[i, j] = valor
+                else:
+                    # Caso raro de borda que ainda pode falhar
+                    pass
 
         if "sobel" in tipo_filtro:
             output = np.abs(output)
@@ -96,7 +97,12 @@ class SistemaImagem:
 # ===========================
 if __name__ == "__main__":
     sistema = SistemaImagem()
-    sistema.abrir_imagem("sua_imagem.jpg")
-    sistema.aplicar_filtro_txt("filtro.txt")
+    
+    # ✅ Use barra normal ou caminho raw (compatível)
+    imagem_path = os.path.join("Testes", "testpat.1k.color2.tif")
+    filtro_path = os.path.join("Testes", "sobelHorizontal.txt")
+
+    sistema.abrir_imagem(imagem_path)
+    sistema.aplicar_filtro_txt(filtro_path)
     sistema.exibir_imagem()
-    sistema.salvar_imagem("saida.jpg")
+    sistema.salvar_imagem("sobelHorizontal.jpg")
